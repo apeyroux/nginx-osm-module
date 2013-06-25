@@ -2,7 +2,6 @@ nginx-osm-module
 ================
 
 NOTE : This module does not work. It is only experimentation nginx module.
----
 
 To install, compile nginx with this ./configure option:
 
