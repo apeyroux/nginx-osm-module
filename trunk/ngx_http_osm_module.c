@@ -1,18 +1,4 @@
-
-
-// http://www.evanmiller.org/nginx-modules-guide.html
-
-/*
- * Modules can define up to three configuration structs, one for the main, server, and location contexts. 
- * Most modules just need a location configuration. 
- * The naming convention for these is ngx_http_<module name>_(main|srv|loc)_conf_t. Here's an example, taken from the dav module
- *
- * Notice that Nginx has special data types (ngx_uint_t and ngx_flag_t); these are just aliases for the primitive 
- * data types you know and love (cf. core/ngx_config.h if you're curious).
- *
- * The elements in the configuration structs are populated by module directives.
- *
- */
+// thx http://www.evanmiller.org/nginx-modules-guide.html
 
 #include <ngx_config.h>
 #include <ngx_core.h>
