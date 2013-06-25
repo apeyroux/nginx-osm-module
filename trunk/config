@@ -1,6 +1,13 @@
-ngx_addon_name=ngx_http_osm_module
-HTTP_MODULES="$HTTP_MODULES ngx_http_osm_module"
-NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_osm_module.c $ngx_addon_dir/ngx_http_osm_misc.c"
-NGX_ADDON_DEPS="$NGX_ADDON_DEPS $ngx_addon_dir/ngx_http_osm_misc.h"
-USE_MD5=YES
-USE_SHA1=YES
+. auto/feature
+
+if [ $ngx_found = yes ]; then
+    ngx_addon_name=ngx_http_osm_module
+    HTTP_MODULES="$HTTP_MODULES ngx_http_osm_module"
+    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_osm_module.c"
+else
+    cat << END
+$0: error: can't init makefile for osm module.
+END
+    exit 1
+fi
+
