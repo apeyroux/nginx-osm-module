@@ -146,6 +146,7 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
 	}
 
+	//TODO:Ajouter du test
 	json_p = json_pack("{s{s{sfsfsf}}s{si}}", 
 							"sys_info", 
 							"loadav", 
@@ -159,6 +160,7 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
 							"osm_nb_mapnik_th", 
 							osmlcf->nb_mapnik_th);
 
+	//TODO:Ajouter du test
 	sjson_p = json_dumps(json_p, JSON_ENSURE_ASCII|JSON_INDENT(4)|JSON_PRESERVE_ORDER);
 	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "%s", sjson_p);
 
@@ -178,6 +180,7 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
 
 	u_char *result = NULL;
 	result = ngx_palloc(r->pool, strlen(sjson_p) + 1);
+	//TODO:Ajouter du test
 	ngx_cpymem(result, sjson_p, strlen(sjson_p) + 1);
 
 	b->pos = result;
