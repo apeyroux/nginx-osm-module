@@ -3,8 +3,11 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
-    
-static ngx_str_t  ngx_http_osm_text = ngx_string("OSM Module is under construction ...");
+
+#include <jansson.h>
+
+#define true 1
+#define false 0
 
 typedef struct {
     ngx_uint_t   nb_mapnik_th;
@@ -25,7 +28,7 @@ static ngx_command_t ngx_http_osm_commands[] = {
       0,
       NULL },
 
-    { ngx_string("nb_mapnik_th"),
+    { ngx_string("osm_nb_mapnik_th"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
@@ -73,7 +76,7 @@ static char *ngx_http_osm(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     clcf->handler = ngx_http_osm_handler;
 
-    osmlcf->enable = 1;
+    osmlcf->enable = true;
 
     return NGX_CONF_OK;
 }
@@ -118,38 +121,75 @@ static ngx_int_t ngx_http_osm_init(ngx_http_osm_loc_conf_t *cglcf)
 
 static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
 {
-    ngx_int_t     rc;
-    ngx_buf_t    *b;
-    ngx_chain_t   out;
+    ngx_int_t		rc;
+    ngx_buf_t 		*b = NULL;
+    ngx_chain_t		out;
+	double 			loadav[3];
 
-    //ngx_http_osm_loc_conf_t  *osmlcf;
-    //osmlcf = ngx_http_get_module_loc_conf(r, ngx_http_osm_module);
-    //osmlcf->nb_mapnik_th;
+	char 			*sjson_p = NULL;
+	json_t			*json_p = NULL;
 
-    r->headers_out.status = NGX_HTTP_OK;
-    r->headers_out.content_length_n = ngx_http_osm_text.len;
-                           
-    rc = ngx_http_send_header(r);
-
-    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
-        return rc;
+	if(NULL == (json_p = malloc(sizeof(json_p)))) {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate json obj. No json, no chocolate !");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    b = ngx_calloc_buf(r->pool);
+	// lycos vas chercher la conf
+    ngx_http_osm_loc_conf_t  *osmlcf;
+    osmlcf = ngx_http_get_module_loc_conf(r, ngx_http_osm_module);
+
+	/*
+	 * check du load av du sys
+	 */
+	if(-1 == getloadavg(loadav, 3)) {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to get loadav.");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+	}
+
+	json_p = json_pack("{s{s{sfsfsf}}s{si}}", 
+							"sys_info", 
+							"loadav", 
+							"1", 
+							loadav[0], 
+							"5", 
+							loadav[1], 
+							"15", 
+							loadav[2], 
+							"module_config", 
+							"osm_nb_mapnik_th", 
+							osmlcf->nb_mapnik_th);
+
+	sjson_p = json_dumps(json_p, JSON_ENSURE_ASCII|JSON_INDENT(4)|JSON_PRESERVE_ORDER);
+	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "%s", sjson_p);
+
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = strlen(sjson_p);
+	r->headers_out.content_type.len = sizeof("application/json") - 1;
+    r->headers_out.content_type.data = (u_char *) "application/json";
+                          
+	b = ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
     if (b == NULL) {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     out.buf = b;
     out.next = NULL;
 
-    b->start = b->pos = ngx_http_osm_text.data;
-    b->end = b->last = ngx_http_osm_text.data + ngx_http_osm_text.len;
+	u_char *result = NULL;
+	result = ngx_palloc(r->pool, strlen(sjson_p) + 1);
+	ngx_cpymem(result, sjson_p, strlen(sjson_p) + 1);
+
+	b->pos = result;
+	b->last = result + strlen(result) + 1;
     b->memory = 1;
     b->last_buf = 1;
-    b->last_in_chain = 1;
 
-	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "OSM module is under construction.");
+    rc = ngx_http_send_header(r);
+
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
 
     return ngx_http_output_filter(r, &out);
 }
