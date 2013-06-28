@@ -13,3 +13,8 @@ My nginx.conf has this:
         osm;
         nb_mapnik_th 8;
     }
+
+TODO
+====
+
+1. If loadav > x , use reverse on tile.osm.org
