@@ -4,6 +4,9 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#include <sys/time.h>
+#include <sys/resource.h>
+
 #include <jansson.h>
 
 #define true 1
@@ -126,6 +129,8 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
     ngx_chain_t		out;
 	double 			loadav[3];
 
+	struct rusage	*usage = NULL;
+
 	char 			*sjson_p = NULL;
 	json_t			*json_p = NULL;
 
@@ -146,8 +151,16 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
 	}
 
+	// get du sys usage TODO: Faire le get de errno en cas d'erreur cf man getrusage
+	// TODO: mettre du test sur le malloc
+	usage = (struct rusage *) malloc(sizeof(struct rusage));
+	if(-1 == getrusage(RUSAGE_SELF, usage)) {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to get rusage.");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+	}
+
 	//TODO:Ajouter du test
-	json_p = json_pack("{s{s{sfsfsf}}s{si}}", 
+	json_p = json_pack("{s{s{sfsfsf}s{si}}s{si}}", 
 							"sys_info", 
 							"loadav", 
 							"1", 
@@ -156,6 +169,9 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
 							loadav[1], 
 							"15", 
 							loadav[2], 
+							"usage",
+							"max_mem",
+							usage->ru_maxrss, // Taille maximale de mémoire résidente utilisée (en kilooctets). Pour RUSAGE_CHILDREN, il s'agit de la taille résidente du fils le plus grand, et non de la taille résidente maximale du processus.
 							"module_config", 
 							"osm_nb_mapnik_th", 
 							osmlcf->nb_mapnik_th);
@@ -193,6 +209,11 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
     if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
         return rc;
     }
+
+	free(usage);
+	usage = NULL;
+	free(json_p);
+	json_p = NULL;
 
     return ngx_http_output_filter(r, &out);
 }
