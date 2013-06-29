@@ -127,8 +127,10 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
     ngx_int_t		rc;
     ngx_buf_t 		*b = NULL;
     ngx_chain_t		out;
-	double 			loadav[3];
 
+	char 			*digit; // TODO: mettre un NULL
+
+	double 			loadav[3];
 	struct rusage	*usage = NULL;
 
 	char 			*sjson_p = NULL;
@@ -159,8 +161,21 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
 	}
 
+	// digit == uri TODO:mettre du test null ponter
+	digit = (char *)r->uri.data + r->uri.len - 1;
+
+	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, digit);
+
+	if (*digit-- == 'f' && *digit-- == 'i' && *digit-- == 'g' && *digit-- == '.') {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Traitement d'un png %s", digit);
+    } // marche pas ?
+
+	if (*digit-- == 'n' && *digit-- == 'o' && *digit-- == 's' && *digit-- == 'j' && *digit-- == '.') {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Traitement d'un json %s", digit);
+    } // marche pas ?
+
 	//TODO:Ajouter du test
-	json_p = json_pack("{s{s{sfsfsf}s{si}}s{si}}", 
+	json_p = json_pack("{s{s{sfsfsf}s{si}}s{siss}}", 
 							"sys_info", 
 							"loadav", 
 							"1", 
@@ -174,10 +189,12 @@ static ngx_int_t ngx_http_osm_handler(ngx_http_request_t *r)
 							usage->ru_maxrss, // Taille maximale de mémoire résidente utilisée (en kilooctets). Pour RUSAGE_CHILDREN, il s'agit de la taille résidente du fils le plus grand, et non de la taille résidente maximale du processus.
 							"module_config", 
 							"osm_nb_mapnik_th", 
-							osmlcf->nb_mapnik_th);
+							osmlcf->nb_mapnik_th,
+							"uri",
+							digit);
 
 	//TODO:Ajouter du test
-	sjson_p = json_dumps(json_p, JSON_ENSURE_ASCII|JSON_INDENT(4)|JSON_PRESERVE_ORDER);
+	sjson_p = json_dumps(json_p, JSON_ENSURE_ASCII|JSON_INDENT(4)|JSON_PRESERVE_ORDER|JSON_ENCODE_ANY);
 	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "%s", sjson_p);
 
     r->headers_out.status = NGX_HTTP_OK;

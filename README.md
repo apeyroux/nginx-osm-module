@@ -14,7 +14,8 @@ My nginx.conf has this:
         nb_mapnik_th 8;
     }
 
-TODO
-====
+TODO/IDEAS
+==========
 
 1. If loadav > x , use reverse on tile.osm.org
+2. http://mysrv/osm/0.0.0.json -> return json tile (count, stat, date, geo (bbox) for stat, size ...)
